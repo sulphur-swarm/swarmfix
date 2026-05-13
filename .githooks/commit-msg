@@ -1,7 +1,0 @@
-#!/bin/sh
-# Auto-injected by Sulphur AI Swarm — ensures AI attribution in commit messages.
-ATTRIBUTION="This commit was created by the Sulphur AI Swarm."
-if ! grep -qF "$ATTRIBUTION" "$1"; then
-  echo "" >> "$1"
-  echo "$ATTRIBUTION" >> "$1"
-fi
