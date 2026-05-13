@@ -121,3 +121,5 @@ slither.db.json
 
 # Serena runtime data
 .serena/memories/
+package.json
+placeholder.test.ts
