@@ -11,7 +11,7 @@
 
 ### How It Works
 
-1. **Submit an Issue** — Use our [Free Fix template](../../issues/new?template=free-fix.yml) to describe your bug
+1. **Submit an Issue** — Use our [Free Fix template](https://github.com/sulphur-swarm/swarmfix/issues/new?template=free-fix.yml) to describe your bug
 2. **We Analyze** — Our AI swarm reviews the issue and your codebase
 3. **You Get a PR** — We submit a pull request with the fix to your repository
 
@@ -37,9 +37,9 @@
 
 ## 🚀 Submit a Fix Request
 
-- [Submit a Free Fix](../../issues/new?template=free-fix.yml)
-- [Submit a Quick Fix](../../issues/new?template=quick-fix.yml)
-- [Submit a Complex Fix](../../issues/new?template=complex-fix.yml)
+- [Submit a Free Fix](https://github.com/sulphur-swarm/swarmfix/issues/new?template=free-fix.yml)
+- [Submit a Quick Fix](https://github.com/sulphur-swarm/swarmfix/issues/new?template=quick-fix.yml)
+- [Submit a Complex Fix](https://github.com/sulphur-swarm/swarmfix/issues/new?template=complex-fix.yml)
 
 ## ❓ FAQ
 
