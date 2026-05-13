@@ -1,0 +1,85 @@
+# Intake Validation Workflow
+# -------------------------
+# Triggered when a new issue is opened. Validates that the issue body
+# contains a GitHub repository URL. If found, posts a welcome comment
+# acknowledging the submission. If missing, asks the submitter to provide
+# one and applies the `status:needs-info` label.
+
+name: Intake Validation
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+# Prevent duplicate runs for the same issue
+concurrency:
+  group: intake-validation-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate-issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate repository URL and respond
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueBody = context.payload.issue.body || '';
+            const issueNumber = context.payload.issue.number;
+            const submitter = context.payload.issue.user.login;
+
+            // Match GitHub repository URLs (https://github.com/owner/repo style)
+            const repoUrlPattern = /https?:\/\/github\.com\/[\w.-]+\/[\w.-]+/;
+            const match = issueBody.match(repoUrlPattern);
+
+            if (match) {
+              // Valid repository URL found — post a welcome/acknowledgment comment
+              const repoUrl = match[0];
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: [
+                  `👋 Thanks for submitting this issue, @${submitter}!`,
+                  '',
+                  `✅ We detected the following repository URL: ${repoUrl}`,
+                  '',
+                  '**Next steps:**',
+                  '1. Our team will review your issue and triage it.',
+                  '2. You\'ll be notified when work begins on your fix.',
+                  '',
+                  'Sit tight — we\'ll get back to you soon!'
+                ].join('\n')
+              });
+
+              console.log(`Valid repo URL found: ${repoUrl}`);
+            } else {
+              // No valid repository URL found — ask the submitter and label the issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: [
+                  `👋 Hi @${submitter}, thanks for reaching out!`,
+                  '',
+                  '⚠️ We couldn\'t find a valid GitHub repository URL in your issue.',
+                  '',
+                  'Please update your issue to include the repository URL ',
+                  '(e.g. `https://github.com/owner/repo`) so we can get started.',
+                ].join('\n')
+              });
+
+              // Apply the status:needs-info label so the stale cleanup workflow
+              // can track issues awaiting a response
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['status:needs-info']
+              });
+
+              console.log('No valid repo URL found — labeled as status:needs-info');
+            }
