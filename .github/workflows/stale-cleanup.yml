@@ -1,0 +1,127 @@
+# Stale Issue Cleanup Workflow
+# ----------------------------
+# Runs daily at 09:00 UTC (and can be triggered manually). Finds open
+# issues labeled `status:needs-info` that have gone inactive and applies
+# a two-phase cleanup process:
+#
+#   Phase 1 — Warning (14 days inactive):
+#     Posts a warning comment and adds the `stale-warning` label.
+#
+#   Phase 2 — Close (21 days inactive, i.e. 14 + 7 day grace period):
+#     Posts a closing comment, closes the issue, and applies
+#     `status:closed-stale`.
+#
+# Staleness is determined by `issue.updated_at`, which GitHub refreshes
+# on any activity (comments, label changes, edits, etc.).
+
+name: Stale Issue Cleanup
+
+on:
+  schedule:
+    # Run daily at 09:00 UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  issues: write
+
+jobs:
+  cleanup-stale-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find and process stale issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const WARN_AFTER_DAYS = 14;   // Days of inactivity before warning
+            const CLOSE_AFTER_DAYS = 21;  // Days of inactivity before closing (14 + 7 grace)
+            const MS_PER_DAY = 24 * 60 * 60 * 1000;
+            const now = Date.now();
+
+            // Fetch all open issues with the status:needs-info label.
+            // Use pagination to handle repos with many issues.
+            const issues = await github.paginate(
+              github.rest.issues.listForRepo,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: 'status:needs-info',
+                state: 'open',
+                per_page: 100
+              }
+            );
+
+            console.log(`Found ${issues.length} open issue(s) with status:needs-info`);
+
+            for (const issue of issues) {
+              // Skip pull requests (the issues API also returns PRs)
+              if (issue.pull_request) continue;
+
+              const updatedAt = new Date(issue.updated_at).getTime();
+              const daysInactive = Math.floor((now - updatedAt) / MS_PER_DAY);
+              const hasStaleWarning = issue.labels.some(l => l.name === 'stale-warning');
+
+              console.log(`Issue #${issue.number}: ${daysInactive} days inactive, warned=${hasStaleWarning}`);
+
+              if (daysInactive >= CLOSE_AFTER_DAYS && hasStaleWarning) {
+                // Phase 2 — Close the issue after the grace period has elapsed
+                console.log(`Closing issue #${issue.number} (inactive ${daysInactive} days)`);
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: [
+                    '🔒 This issue has been automatically closed due to inactivity.',
+                    '',
+                    `No response was received for ${daysInactive} days after ` +
+                    'additional information was requested.',
+                    '',
+                    'Feel free to reopen this issue if you\'d like to continue.'
+                  ].join('\n')
+                });
+
+                // Apply the closed-stale status label and close the issue
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['status:closed-stale']
+                });
+
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  state: 'closed'
+                });
+              } else if (daysInactive >= WARN_AFTER_DAYS && !hasStaleWarning) {
+                // Phase 1 — Post a warning and mark the issue
+                console.log(`Warning issue #${issue.number} (inactive ${daysInactive} days)`);
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: [
+                    '⏰ **Stale issue warning**',
+                    '',
+                    `This issue has been inactive for ${daysInactive} days. ` +
+                    'It will be **automatically closed in 7 days** if no response ' +
+                    'is received.',
+                    '',
+                    'Please provide the requested information to keep this issue open.'
+                  ].join('\n')
+                });
+
+                // Add the stale-warning label to track that we've warned the submitter.
+                // This prevents duplicate warnings on subsequent runs.
+                await github.rest.issues.addLabels({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  labels: ['stale-warning']
+                });
+              }
+              // If daysInactive < WARN_AFTER_DAYS, do nothing — issue is still fresh
+            }
