@@ -1,0 +1,65 @@
+name: "🆓 Free Fix Request"
+description: "Submit a bug or issue for a free AI-powered fix (Phase 1)"
+title: "[Free Fix]: "
+labels: ["tier:free", "status:new"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Free Fix Request
+        Thanks for submitting a fix request! Please fill out the details below so our AI swarm can analyze and resolve your issue.
+
+  - type: input
+    id: repository
+    attributes:
+      label: "Repository URL"
+      description: "Full URL of the public GitHub repository containing the issue"
+      placeholder: "https://github.com/owner/repo"
+    validations:
+      required: true
+
+  - type: input
+    id: issue-link
+    attributes:
+      label: "Issue Link (if exists)"
+      description: "Link to an existing issue in your repo, if applicable"
+      placeholder: "https://github.com/owner/repo/issues/123"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Bug/Issue Description"
+      description: "Clearly describe the bug or issue you want fixed"
+      placeholder: "Describe the problem..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: "Steps to Reproduce"
+      description: "How can we reproduce the issue?"
+      placeholder: |
+        1. Step one
+        2. Step two
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: "Expected Behavior"
+      description: "What should happen instead?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Additional Context"
+      description: "Any additional context, screenshots, logs, or relevant file paths"
+    validations:
+      required: false
