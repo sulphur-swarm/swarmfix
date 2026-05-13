@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "📖 How SwarmFix Works"
+    url: https://github.com/sulphur-swarm/swarmfix#-how-it-works
+    about: "Learn how our AI-powered fix service works"
+  - name: "💬 Questions or Feedback"
+    url: https://github.com/sulphur-swarm/swarmfix/discussions
+    about: "Ask questions or share feedback"
