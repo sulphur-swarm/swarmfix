@@ -80,11 +80,45 @@ Avoid:
 
 | Tier | Typical Turnaround |
 |------|-------------------|
-| Free Fix | 2–5 days (best-effort) |
+| Free Fix | Best-effort (no SLA) |
 | Quick Fix | ~24–48 hours |
 | Complex Fix | 2–7 days |
 
 Expedited turnaround is available at an additional cost. See [Pricing](./PRICING.md) for details.
+
+## Issue Lifecycle & Status Labels
+
+Every SwarmFix issue moves through a defined lifecycle, tracked via GitHub labels. The table below describes each status label and when it is applied.
+
+| Label | Applied When |
+|-------|-------------|
+| `status:new` | Issue is opened (applied automatically by the auto-label workflow) |
+| `status:needs-info` | More information is required from the submitter before triage can proceed |
+| `status:triaged` | Issue has been reviewed and classified into a pricing tier |
+| `status:quoted` | A price quote has been posted as a comment on the issue |
+| `status:accepted` | The customer has confirmed acceptance of the quote; work is queued to begin |
+| `status:in-progress` | The AI swarm is actively developing the fix |
+| `status:pr-delivered` | A pull request has been opened on the customer's repository |
+| `status:completed` | The customer has accepted the PR and payment has been received |
+| `status:closed-stale` | Issue was closed due to inactivity or insufficient information |
+
+### Typical lifecycle flow
+
+```
+status:new
+  → status:triaged (or status:needs-info → status:triaged)
+  → status:quoted
+  → status:accepted
+  → status:in-progress
+  → status:pr-delivered
+  → status:completed (or issue closed/rejected with no payment)
+```
+
+To initialize all lifecycle labels in a fresh repository, run:
+
+```bash
+bash scripts/setup-labels.sh
+```
 
 ---
 
