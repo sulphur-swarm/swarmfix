@@ -2,6 +2,7 @@
   "name": "swarmfix",
   "private": true,
   "scripts": {
-    "check": "true"
+    "check": "true",
+    "test": "true"
   }
 }
