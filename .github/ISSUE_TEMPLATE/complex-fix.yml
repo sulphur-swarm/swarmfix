@@ -53,6 +53,31 @@ body:
       required: true
 
   - type: textarea
+    id: actual
+    attributes:
+      label: "Actual Behavior"
+      description: "If reporting a bug, describe what currently happens"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: "Language / Framework"
+      description: "Primary language or framework of the affected code"
+      options:
+        - "JavaScript / TypeScript"
+        - "Python"
+        - "Go"
+        - "Rust"
+        - "Java"
+        - "C / C++"
+        - "Ruby"
+        - "Other"
+    validations:
+      required: false
+
+  - type: textarea
     id: constraints
     attributes:
       label: "Technical Constraints"
