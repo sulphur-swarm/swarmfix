@@ -1,9 +1,10 @@
 # Intake Validation Workflow
 # -------------------------
 # Triggered when a new issue is opened. Validates that the issue body
-# contains a GitHub repository URL. If found, posts a welcome comment
-# acknowledging the submission. If missing, asks the submitter to provide
-# one and applies the `status:needs-info` label.
+# contains a GitHub repository URL, that the URL format is correct, and
+# that the repository is publicly accessible via the GitHub API. On success,
+# posts a welcome comment. On failure, explains the problem, applies the
+# `status:needs-info` label, and asks the submitter to correct their issue.
 
 name: Intake Validation
 
@@ -31,33 +32,8 @@ jobs:
             const issueNumber = context.payload.issue.number;
             const submitter = context.payload.issue.user.login;
 
-            // Match GitHub repository URLs (https://github.com/owner/repo style)
-            const repoUrlPattern = /https?:\/\/github\.com\/[\w.-]+\/[\w.-]+/;
-            const match = issueBody.match(repoUrlPattern);
-
-            if (match) {
-              // Valid repository URL found — post a welcome/acknowledgment comment
-              const repoUrl = match[0];
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: issueNumber,
-                body: [
-                  `👋 Thanks for submitting this issue, @${submitter}!`,
-                  '',
-                  `✅ We detected the following repository URL: ${repoUrl}`,
-                  '',
-                  '**Next steps:**',
-                  '1. Our team will review your issue and triage it.',
-                  '2. You\'ll be notified when work begins on your fix.',
-                  '',
-                  'Sit tight — we\'ll get back to you soon!'
-                ].join('\n')
-              });
-
-              console.log(`Valid repo URL found: ${repoUrl}`);
-            } else {
-              // No valid repository URL found — ask the submitter and label the issue
+            // Helper: post comment + apply needs-info label
+            async function failValidation(reason) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -65,21 +41,125 @@ jobs:
                 body: [
                   `👋 Hi @${submitter}, thanks for reaching out!`,
                   '',
-                  '⚠️ We couldn\'t find a valid GitHub repository URL in your issue.',
-                  '',
-                  'Please update your issue to include the repository URL ',
-                  '(e.g. `https://github.com/owner/repo`) so we can get started.',
+                  `⚠️ ${reason}`,
                 ].join('\n')
               });
-
-              // Apply the status:needs-info label so the stale cleanup workflow
-              // can track issues awaiting a response
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
                 labels: ['status:needs-info']
               });
+            }
 
+            // Step 1: Detect GitHub repo URL
+            // Match exactly https://github.com/owner/repo (no extra path segments)
+            const repoUrlPattern = /https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+?)(?:\/|$|\s)/;
+            const match = issueBody.match(repoUrlPattern);
+
+            if (!match) {
+              await failValidation(
+                "We couldn't find a valid GitHub repository URL in your issue.\n\n" +
+                "Please update your issue to include the repository URL " +
+                "(e.g. `https://github.com/owner/repo`) so we can get started."
+              );
               console.log('No valid repo URL found — labeled as status:needs-info');
+              return;
+            }
+
+            const owner = match[1];
+            const repo = match[2];
+            const repoUrl = `https://github.com/${owner}/${repo}`;
+
+            // Step 2: Validate owner/repo format (basic sanity)
+            const validSegment = /^[\w][\w.-]*$/;
+            if (!validSegment.test(owner) || !validSegment.test(repo)) {
+              await failValidation(
+                `The repository URL \`${repoUrl}\` doesn't look valid.\n\n` +
+                "Please ensure it follows the format `https://github.com/owner/repo` " +
+                "where owner and repo contain only letters, numbers, hyphens, underscores, and dots."
+              );
+              console.log(`Invalid owner/repo format: ${repoUrl}`);
+              return;
+            }
+
+            // Step 3: Validate issue link format (if present)
+            const issueLinkPattern = /https?:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/(\d+)/;
+            const issueMatch = issueBody.match(issueLinkPattern);
+            if (issueMatch) {
+              const issueNum = parseInt(issueMatch[1], 10);
+              if (!issueNum || issueNum < 1) {
+                await failValidation(
+                  "The issue link in your submission doesn't have a valid issue number.\n\n" +
+                  "Please ensure it follows the format `https://github.com/owner/repo/issues/123`."
+                );
+                console.log('Invalid issue link format');
+                return;
+              }
+            }
+
+            // Step 4: Check repo accessibility via GitHub API (no auth)
+            let apiStatus;
+            try {
+              const response = await fetch(
+                `https://api.github.com/repos/${owner}/${repo}`,
+                {
+                  headers: {
+                    'Accept': 'application/vnd.github+json',
+                    'User-Agent': 'sulphur-swarm-intake-validation'
+                  }
+                }
+              );
+              apiStatus = response.status;
+            } catch (err) {
+              // Network error
+              console.log(`Network error checking repo: ${err.message}`);
+              await failValidation(
+                "We couldn't verify the repository URL at this time due to a network error. " +
+                `Please ensure \`${repoUrl}\` points to a valid public GitHub repository.`
+              );
+              return;
+            }
+
+            if (apiStatus === 200) {
+              // Success — post welcome comment
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                body: [
+                  `👋 Thanks for submitting this issue, @${submitter}!`,
+                  '',
+                  `✅ We verified the repository exists: ${repoUrl}`,
+                  '',
+                  '**Next steps:**',
+                  '1. Our team will review your issue and triage it.',
+                  "2. You'll be notified when work begins on your fix.",
+                  '',
+                  "Sit tight — we'll get back to you soon!"
+                ].join('\n')
+              });
+              console.log(`Repo verified: ${repoUrl}`);
+            } else if (apiStatus === 404) {
+              await failValidation(
+                `The repository \`${repoUrl}\` doesn't appear to exist or may be private.\n\n` +
+                "Please ensure:\n" +
+                "- The repository URL is correct\n" +
+                "- The repository is **public** (private repositories cannot be accessed by our system)"
+              );
+              console.log(`Repo not found or private: ${repoUrl}`);
+            } else if (apiStatus === 403 || apiStatus === 429) {
+              // Rate limited — fail gracefully, don't block the submitter
+              console.log(`GitHub API rate limited (status ${apiStatus}) — failing gracefully`);
+              await failValidation(
+                "We couldn't verify the repository right now due to API rate limiting.\n\n" +
+                `Please ensure \`${repoUrl}\` points to a valid public GitHub repository. ` +
+                "Our team will review this manually."
+              );
+            } else {
+              console.log(`Unexpected GitHub API status: ${apiStatus}`);
+              await failValidation(
+                `We couldn't verify the repository \`${repoUrl}\` at this time (API returned status ${apiStatus}).\n\n` +
+                "Please ensure it points to a valid public GitHub repository."
+              );
             }
