@@ -1,0 +1,72 @@
+name: "⚡ Quick Fix Request"
+description: "Submit a targeted fix or small feature request ($10–$50)"
+title: "[Quick Fix]: "
+labels: ["tier:quick", "status:new"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Quick Fix Request
+        Quick fixes cover targeted bug fixes and small feature implementations across multiple files.
+        **Pricing: $10–$50** (payment details provided upon acceptance)
+
+  - type: input
+    id: repository
+    attributes:
+      label: "Repository URL"
+      description: "Full URL of the GitHub repository"
+      placeholder: "https://github.com/owner/repo"
+    validations:
+      required: true
+
+  - type: input
+    id: issue-link
+    attributes:
+      label: "Issue Link (if exists)"
+      description: "Link to an existing issue in your repo, if applicable"
+      placeholder: "https://github.com/owner/repo/issues/123"
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      description: "Describe what you need fixed or implemented"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: "Acceptance Criteria"
+      description: "How will you verify the fix is correct?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: "Relevant Files/Areas"
+      description: "List specific files or areas of the codebase involved"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: "Urgency"
+      options:
+        - "Low — no rush"
+        - "Medium — within a week"
+        - "High — within 48 hours"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: "Additional Context"
+      description: "Any additional context, screenshots, logs, or constraints"
+    validations:
+      required: false
