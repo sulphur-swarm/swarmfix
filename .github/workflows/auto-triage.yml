@@ -1,0 +1,148 @@
+# Auto-Triage Workflow
+# --------------------
+# Label state transitions:
+#   status:new  →  [analysis]  →  status:triaged  →  [quote comment]  →  status:quoted
+#
+# Triggered when the 'status:new' label is applied to an issue.
+# 1. Extracts tier label (tier:free | tier:quick-fix | tier:complex-fix)
+# 2. Estimates complexity (simple / moderate / complex) via keyword heuristics
+# 3. Posts a triage comment with confirmed tier, complexity, price quote, and turnaround
+# 4. Applies status:triaged label
+# 5. Applies status:quoted label
+
+name: Auto-Triage
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: auto-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    # Only run when status:new label is applied
+    if: github.event.label.name == 'status:new'
+    steps:
+      - name: Analyze issue and post triage comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const issueBody = context.payload.issue.body || '';
+            const issueLabels = context.payload.issue.labels.map(l => l.name);
+            const submitter = context.payload.issue.user.login;
+
+            // --- Detect tier label ---
+            const tierLabel = issueLabels.find(l =>
+              ['tier:free', 'tier:quick-fix', 'tier:complex-fix'].includes(l)
+            );
+
+            if (!tierLabel) {
+              console.log('No tier label found — skipping triage');
+              return;
+            }
+
+            // --- Complexity heuristic ---
+            const bodyLower = issueBody.toLowerCase();
+            const bodyLen = issueBody.length;
+
+            const simpleKeywords = ['typo', 'rename', 'config', 'whitespace', 'format', 'spelling', 'comment', 'readme'];
+            const complexKeywords = ['refactor', 'architecture', 'concurrent', 'concurrency', 'performance', 'security', 'multi-file', 'multiple files', 'across modules', 'comprehensive'];
+
+            let complexity;
+            if (bodyLen < 300 || simpleKeywords.some(k => bodyLower.includes(k))) {
+              complexity = 'simple';
+            } else if (bodyLen > 1000 || complexKeywords.some(k => bodyLower.includes(k))) {
+              complexity = 'complex';
+            } else {
+              complexity = 'moderate';
+            }
+
+            // --- Triage data (values match docs/PRICING.md) ---
+            const TRIAGE_DATA = {
+              'tier:free': {
+                label: '🆓 Free Fix',
+                priceRange: { simple: '$0', moderate: '$0', complex: '$0' },
+                turnaround: {
+                  simple:   'Best-effort (no SLA)',
+                  moderate: 'Best-effort (no SLA)',
+                  complex:  'Best-effort (no SLA)',
+                },
+              },
+              'tier:quick-fix': {
+                label: '⚡ Quick Fix',
+                priceRange: { simple: '$10–$25', moderate: '$25–$40', complex: '$40–$50' },
+                turnaround: {
+                  simple:   '~24 hours',
+                  moderate: '~24–48 hours',
+                  complex:  '~48 hours',
+                },
+              },
+              'tier:complex-fix': {
+                label: '🔧 Complex Fix',
+                priceRange: { simple: '$50–$150', moderate: '$150–$300', complex: '$300–$500' },
+                turnaround: {
+                  simple:   '2–3 days',
+                  moderate: '3–5 days',
+                  complex:  '5–7 days',
+                },
+              },
+            };
+
+            const tier = TRIAGE_DATA[tierLabel];
+            const price = tier.priceRange[complexity];
+            const turnaround = tier.turnaround[complexity];
+            const complexityLabel = complexity.charAt(0).toUpperCase() + complexity.slice(1);
+
+            // --- Post triage comment ---
+            const comment = [
+              `🤖 **Automated Triage Report** for @${submitter}`,
+              '',
+              '---',
+              '',
+              `**Tier:** ${tier.label}`,
+              `**Complexity estimate:** ${complexityLabel}`,
+              `**Price quote:** ${price}`,
+              `**Estimated turnaround:** ${turnaround}`,
+              '',
+              '---',
+              '',
+              '_This is an automated estimate based on initial issue analysis. Final pricing may vary after detailed review._',
+              '',
+              'Payment is **pay-on-acceptance** — you only pay after reviewing and accepting the delivered PR. See [PRICING.md](../blob/main/docs/PRICING.md) for full details.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: comment,
+            });
+
+            console.log(`Triage comment posted: tier=${tierLabel}, complexity=${complexity}, price=${price}`);
+
+            // --- Apply status:triaged label ---
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['status:triaged'],
+            });
+
+            console.log('Applied label: status:triaged');
+
+            // --- Apply status:quoted label ---
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: ['status:quoted'],
+            });
+
+            console.log('Applied label: status:quoted');
