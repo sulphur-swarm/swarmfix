@@ -101,7 +101,7 @@ Open an issue on the **SwarmFix intake repository** with your repository URL and
 
 | Tier | Typical Turnaround |
 |------|-------------------|
-| Free Fix | 2–5 days |
+| Free Fix | Best-effort |
 | Quick Fix | 24–48 hours |
 | Complex Fix | 2–7 days |
 
