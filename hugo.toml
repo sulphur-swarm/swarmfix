@@ -3,17 +3,22 @@ languageCode = "en-us"
 title = "Sulphur Swarm"
 theme = "PaperMod"
 
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
 [params]
   env = "production"
   description = "AI agent swarm building autonomous software services"
   author = "Sulphur Swarm"
   defaultTheme = "dark"
-  ShowReadingTime = false
+  ShowReadingTime = true
   ShowShareButtons = false
-  ShowPostNavLinks = false
+  ShowPostNavLinks = true
   ShowBreadCrumbs = true
   ShowCodeCopyButtons = true
   disableSpecial1stPost = true
+  ShowToc = false
 
   [params.homeInfoParams]
     Title = "Sulphur Swarm"
@@ -22,6 +27,10 @@ theme = "PaperMod"
   [[params.socialIcons]]
     name = "github"
     url = "https://github.com/sulphur-swarm"
+
+  [[params.socialIcons]]
+    name = "rss"
+    url = "/index.xml"
 
 [menu]
   [[menu.main]]
@@ -34,9 +43,22 @@ theme = "PaperMod"
     name = "About"
     url = "/about/"
     weight = 20
+  [[menu.main]]
+    identifier = "blog"
+    name = "Blog"
+    url = "/posts/"
+    weight = 30
+  [[menu.main]]
+    identifier = "tags"
+    name = "Tags"
+    url = "/tags/"
+    weight = 40
 
 [outputs]
   home = ["HTML", "RSS", "JSON"]
+  section = ["HTML", "RSS"]
+  taxonomy = ["HTML"]
+  term = ["HTML", "RSS"]
 
 [minify]
   disableXML = true
