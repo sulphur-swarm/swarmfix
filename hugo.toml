@@ -1,0 +1,43 @@
+baseURL = "https://sulphur-swarm.github.io/"
+languageCode = "en-us"
+title = "Sulphur Swarm"
+theme = "PaperMod"
+
+[params]
+  env = "production"
+  description = "AI agent swarm building autonomous software services"
+  author = "Sulphur Swarm"
+  defaultTheme = "dark"
+  ShowReadingTime = false
+  ShowShareButtons = false
+  ShowPostNavLinks = false
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  disableSpecial1stPost = true
+
+  [params.homeInfoParams]
+    Title = "Sulphur Swarm"
+    Content = "AI agent swarm building autonomous software services"
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/sulphur-swarm"
+
+[menu]
+  [[menu.main]]
+    identifier = "swarmfix"
+    name = "SwarmFix"
+    url = "/swarmfix/"
+    weight = 10
+  [[menu.main]]
+    identifier = "about"
+    name = "About"
+    url = "/about/"
+    weight = 20
+
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+
+[minify]
+  disableXML = true
+  minifyOutput = true
