@@ -8,6 +8,10 @@
 #   free-fix  template → tier:free
 #   quick-fix template → tier:quick
 #   complex-fix template → tier:complex
+#
+# Short-circuit: if the issue already has a tier:* label AND status:new
+# (set automatically by the issue form template's YAML frontmatter), skip
+# all detection logic — nothing to do.
 
 name: Auto Label
 
@@ -36,46 +40,42 @@ jobs:
             const title = (issue.title || '').toLowerCase();
             const issueNumber = issue.number;
 
-            // Collect existing label names to avoid duplicates
+            // Collect existing label names
             const existingLabels = issue.labels.map(l => l.name);
 
-            // Determine which template was used by looking for distinctive
-            // markers in the issue body or title. Each issue form template
-            // includes its tier name in the rendered body heading.
+            // Short-circuit: if the issue already has a tier label AND status:new,
+            // these were set by the issue form template — nothing to do.
+            const hasTierLabel = existingLabels.some(l => l.startsWith('tier:'));
+            const hasStatusNew = existingLabels.includes('status:new');
+
+            if (hasTierLabel && hasStatusNew) {
+              console.log('Labels already set by issue template — skipping auto-label');
+              return;
+            }
+
+            // For issues opened without a template, detect tier from content
             const labelsToAdd = [];
 
-            // --- Tier detection ---
             if (body.includes('free fix') || body.includes('free-fix') ||
                 title.includes('free fix') || title.includes('free-fix')) {
-              if (!existingLabels.includes('tier:free')) {
-                labelsToAdd.push('tier:free');
-              }
+              if (!existingLabels.includes('tier:free')) labelsToAdd.push('tier:free');
               console.log('Detected free-fix template');
             } else if (body.includes('complex fix') || body.includes('complex-fix') ||
                        title.includes('complex fix') || title.includes('complex-fix')) {
-              // Check complex before quick because "quick" could be a substring match;
-              // complex is more specific so we check it first.
-              if (!existingLabels.includes('tier:complex')) {
-                labelsToAdd.push('tier:complex');
-              }
+              if (!existingLabels.includes('tier:complex')) labelsToAdd.push('tier:complex');
               console.log('Detected complex-fix template');
             } else if (body.includes('quick fix') || body.includes('quick-fix') ||
                        title.includes('quick fix') || title.includes('quick-fix')) {
-              if (!existingLabels.includes('tier:quick')) {
-                labelsToAdd.push('tier:quick');
-              }
+              if (!existingLabels.includes('tier:quick')) labelsToAdd.push('tier:quick');
               console.log('Detected quick-fix template');
             } else {
-              // No template match found — skip tier labeling
               console.log('No template match found; skipping tier label');
             }
 
-            // --- Always apply status:new to every new issue ---
             if (!existingLabels.includes('status:new')) {
               labelsToAdd.push('status:new');
             }
 
-            // Apply all labels in a single API call to minimize requests
             if (labelsToAdd.length > 0) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
