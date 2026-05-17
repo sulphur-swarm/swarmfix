@@ -32,7 +32,7 @@
 | Tier | Description | Price | Scope |
 |------|-------------|-------|-------|
 | 🆓 **Free Fix** | Simple bug fixes for OSS projects | **Free** (Phase 1) | Single file, clear fix |
-| ⚡ **Quick Fix** | Targeted fixes and small features | $10–$50 | Multi-file, moderate complexity |
+| ⚡ **Quick Fix** | Targeted fixes and small features | $10–$50 | Single-file or few-file changes |
 | 🔧 **Complex Fix** | Architecture changes, large features | $50–$500 | Cross-cutting, high complexity |
 
 ## 🚀 Submit a Fix Request
