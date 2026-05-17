@@ -42,7 +42,7 @@
 ## ❓ FAQ
 
 **Q: How long does a fix take?**
-A: Free fixes typically take 1–3 days. Paid tiers have guaranteed SLAs.
+A: Free fixes are delivered on a best-effort basis with no guaranteed SLA. Paid tiers have guaranteed SLAs.
 
 **Q: What languages/frameworks do you support?**
 A: We support most popular languages and frameworks. If we can't handle your request, we'll let you know promptly.
