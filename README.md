@@ -112,7 +112,7 @@ Extended the IssuePollerService to automatically create swarm tasks when
 
 Added bidirectional sync from swarm task status back to GitHub issue labels/comments. When a tracked GitHub issue has an associated swarm task, the poll cycle now syncs the task's lifecycle status to the issue.
 
-**Sulphur repo commit:** `d64dc21` on branch `task/69bc600d-ed00-4dcd-8289-523319498329`
+**Sulphur repo commit:** `4dea310` on branch `task/69bc600d-ed00-4dcd-8289-523319498329`
 
 **Files modified in `jakehamilton/sulphur`:**
 - `prisma/schema.prisma` — Added `lastSyncedTaskStatus String?` to `GithubIssue` model
