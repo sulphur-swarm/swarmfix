@@ -112,14 +112,14 @@ Extended the IssuePollerService to automatically create swarm tasks when
 
 Added bidirectional sync from swarm task status back to GitHub issue labels/comments. When a tracked GitHub issue has an associated swarm task, the poll cycle now syncs the task's lifecycle status to the issue.
 
-**Sulphur repo commit:** `4dea310` on branch `task/69bc600d-ed00-4dcd-8289-523319498329`
+**Sulphur repo commit:** `f1a7516` on branch `task/de4bd0bb-1490-4332-a10b-243d9b094345`
 
 **Files modified in `jakehamilton/sulphur`:**
 - `prisma/schema.prisma` — Added `lastSyncedTaskStatus String?` to `GithubIssue` model
 - `prisma/migrations/20260517200000_add_last_synced_task_status/` — Migration for the new field
-- `src/services/issue-poller-task.ts` — Added `postGithubComment()`, `syncSingleIssue()`, `syncTaskStatusToGithub()` functions
+- `src/services/issue-poller-task.ts` — Added `postGithubComment()`, `syncSingleIssue()`, `syncTaskStatusToGithub()` functions (with dependency injection for testability)
 - `src/services/issue-poller.ts` — Integrated `syncTaskStatusToGithub()` into the poll tick
-- `src/services/issue-poller-task-sync.test.ts` — 12 unit tests covering all sync transitions (work, review, done, cancelled, unknown, no-op, error handling)
+- `src/services/issue-poller-task-sync.test.ts` — 12 unit tests covering all sync transitions (work, review, done, cancelled, unknown, no-op, error handling) using DI pattern to avoid module mock leakage
 
 **Status transitions synced:**
 - `work` → adds `status:in-progress` label
