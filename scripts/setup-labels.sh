@@ -32,3 +32,8 @@ create_label "status:accepted"     "0e8a16" "Customer has accepted the quote; wo
 create_label "status:in-progress"  "fbca04" "Fix is actively being developed"
 create_label "status:pr-delivered" "6f42c1" "Pull request has been submitted to the customer repo"
 create_label "status:completed"    "28a745" "PR accepted and payment received; issue resolved"
+
+# Payment status labels
+create_label "status:payment-pending"   "e4c000" "Payment link posted, awaiting payment"
+create_label "status:payment-confirmed" "28a745" "Payment received and verified"
+create_label "status:payment-expired"   "d73a4a" "Payment link expired without payment"
