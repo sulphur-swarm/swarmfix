@@ -71,3 +71,17 @@ Implemented label-change detection in the IssuePollerService (in the `jakehamilt
 **Files modified in `jakehamilton/sulphur`:**
 - `src/services/issue-poller.ts` — Added `notifyAcceptedIssue()` function and label change detection logic in `pollRepo()`
 - `src/services/issue-poller-labels.test.ts` — Added 5 tests covering all label detection edge cases
+
+---
+
+## 🔧 Swarm Internals: Bridge Phase 1 (Redo)
+
+**Task:** 4d0a3ab3-fc74-42f9-81d4-37ab803a62a9
+
+Implemented label-change detection in the IssuePollerService (in the `jakehamilton/sulphur` repo). The poller now detects when `status:accepted` is newly applied to a tracked GitHub issue and sends a notification mail to the PM, enabling the task creation flow.
+
+**Sulphur repo commit:** `39e6aa6` on branch `task/4d0a3ab3-fc74-42f9-81d4-37ab803a62a9`
+
+**Files modified in `jakehamilton/sulphur`:**
+- `src/services/issue-poller.ts` — Added `notifyAcceptedIssue()` function and label change detection logic in `pollRepo()`
+- `src/services/issue-poller-labels.test.ts` — Added 7 tests covering all label detection edge cases
