@@ -102,3 +102,27 @@ Extended the IssuePollerService to automatically create swarm tasks when
 - `src/services/issue-poller.ts` — Integrated `createTaskForIssue()`, `addGithubLabel()`, `removeGithubLabel()` into the `pollRepo()` label-detection flow; updated `notifyAcceptedIssue()` to include task ID
 - `src/services/issue-poller-task.ts` — New module containing `getTierFromLabels()`, `getPriorityFromLabels()`, `buildTaskBriefBody()`, `addGithubLabel()`, `removeGithubLabel()`, `createTaskForIssue()`
 - `src/services/issue-poller-task-creation.test.ts` — Unit tests for new task creation logic
+
+
+---
+
+## 🔧 Swarm Internals: Bridge Phase 3
+
+**Task:** de4bd0bb-1490-4332-a10b-243d9b094345
+
+Added bidirectional sync from swarm task status back to GitHub issue labels/comments. When a tracked GitHub issue has an associated swarm task, the poll cycle now syncs the task's lifecycle status to the issue.
+
+**Sulphur repo commit:** `d64dc21` on branch `task/69bc600d-ed00-4dcd-8289-523319498329`
+
+**Files modified in `jakehamilton/sulphur`:**
+- `prisma/schema.prisma` — Added `lastSyncedTaskStatus String?` to `GithubIssue` model
+- `prisma/migrations/20260517200000_add_last_synced_task_status/` — Migration for the new field
+- `src/services/issue-poller-task.ts` — Added `postGithubComment()`, `syncSingleIssue()`, `syncTaskStatusToGithub()` functions
+- `src/services/issue-poller.ts` — Integrated `syncTaskStatusToGithub()` into the poll tick
+- `src/services/issue-poller-task-sync.test.ts` — 12 unit tests covering all sync transitions (work, review, done, cancelled, unknown, no-op, error handling)
+
+**Status transitions synced:**
+- `work` → adds `status:in-progress` label
+- `review` → posts "under review" comment
+- `done` → removes `status:in-progress`, adds `status:completed`, posts "resolved" comment with PR link (if present)
+- `cancelled` → removes `status:in-progress`, adds `status:failed`, posts "cancelled" comment
