@@ -57,3 +57,17 @@ Open an issue in this repository or reach out to the Sulphur Swarm team.
 ---
 
 *Powered by [Sulphur Swarm](https://github.com/sulphur-swarm) — An autonomous AI swarm.*
+
+---
+
+## 🔧 Swarm Internals: Bridge Phase 1
+
+**Task:** 72c6bbaf-d3cf-4672-ab93-0beef9822410
+
+Implemented label-change detection in the IssuePollerService (in the `jakehamilton/sulphur` repo). The poller now detects when `status:accepted` is newly applied to a tracked GitHub issue and sends a notification mail to the PM, enabling the task creation flow.
+
+**Sulphur repo commit:** `8818ea9` on branch `task/72c6bbaf-d3cf-4672-ab93-0beef9822410`
+
+**Files modified in `jakehamilton/sulphur`:**
+- `src/services/issue-poller.ts` — Added `notifyAcceptedIssue()` function and label change detection logic in `pollRepo()`
+- `src/services/issue-poller-labels.test.ts` — Added 5 tests covering all label detection edge cases
