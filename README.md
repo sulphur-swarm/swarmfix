@@ -102,3 +102,5 @@ Extended the IssuePollerService to automatically create swarm tasks when
 - `src/services/issue-poller.ts` — Integrated `createTaskForIssue()`, `addGithubLabel()`, `removeGithubLabel()` into the `pollRepo()` label-detection flow; updated `notifyAcceptedIssue()` to include task ID
 - `src/services/issue-poller-task.ts` — New module containing `getTierFromLabels()`, `getPriorityFromLabels()`, `buildTaskBriefBody()`, `addGithubLabel()`, `removeGithubLabel()`, `createTaskForIssue()`
 - `src/services/issue-poller-task-creation.test.ts` — Unit tests for new task creation logic
+
+<!-- payment webhook implemented -->
