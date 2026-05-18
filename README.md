@@ -85,3 +85,20 @@ Implemented label-change detection in the IssuePollerService (in the `jakehamilt
 **Files modified in `jakehamilton/sulphur`:**
 - `src/services/issue-poller.ts` — Added `notifyAcceptedIssue()` function and label change detection logic in `pollRepo()`
 - `src/services/issue-poller-labels.test.ts` — Added 7 tests covering all label detection edge cases
+
+
+---
+
+## 🔧 Swarm Internals: Bridge Phase 2
+
+**Task:** 8c1a35f7-820c-449c-88b7-48f7d2eab9c0
+
+Extended the IssuePollerService to automatically create swarm tasks when
+`status:accepted` is detected on a tracked GitHub issue.
+
+**Sulphur repo commit:** `ebe8e83` on branch `task/8c1a35f7-820c-449c-88b7-48f7d2eab9c0`
+
+**Files modified in `jakehamilton/sulphur`:**
+- `src/services/issue-poller.ts` — Integrated `createTaskForIssue()`, `addGithubLabel()`, `removeGithubLabel()` into the `pollRepo()` label-detection flow; updated `notifyAcceptedIssue()` to include task ID
+- `src/services/issue-poller-task.ts` — New module containing `getTierFromLabels()`, `getPriorityFromLabels()`, `buildTaskBriefBody()`, `addGithubLabel()`, `removeGithubLabel()`, `createTaskForIssue()`
+- `src/services/issue-poller-task-creation.test.ts` — Unit tests for new task creation logic
