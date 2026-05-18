@@ -1,0 +1,188 @@
+# Paid Triage Workflow
+# --------------------
+# Label state transitions:
+#   status:accepted  →  [invoice creation]  →  status:payment-pending
+#
+# Triggered when a label is applied to an issue.
+# 1. Checks if the newly applied label is 'status:accepted'
+# 2. Checks if the issue has a paid tier label (tier:quick-fix or tier:complex-fix)
+# 3. Determines price based on tier and complexity from prior triage comment
+# 4. Creates a NOWPayments invoice
+# 5. Posts a payment comment with the invoice link
+# 6. Adds status:payment-pending label
+# 7. Removes status:accepted label
+
+name: Paid Triage
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+concurrency:
+  group: paid-triage-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  create-invoice:
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'status:accepted'
+    steps:
+      - name: Create NOWPayments invoice and post payment link
+        uses: actions/github-script@v7
+        env:
+          NOWPAYMENTS_API_KEY: ${{ secrets.NOWPAYMENTS_API_KEY }}
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+            const issueTitle  = context.payload.issue.title;
+            const issueLabels = context.payload.issue.labels.map(l => l.name);
+            const issueUrl    = context.payload.issue.html_url;
+            const owner       = context.repo.owner;
+            const repo        = context.repo.repo;
+
+            // 1. Early-exit for non-paid tiers
+            const paidTiers = ['tier:quick-fix', 'tier:complex-fix'];
+            const tierLabel = issueLabels.find(l => paidTiers.includes(l));
+            if (!tierLabel) {
+              console.log(`Issue #${issueNumber} is not a paid tier — skipping.`);
+              return;
+            }
+
+            // 2. Determine complexity from prior triage comment
+            //    Look for "Complexity estimate: Simple|Moderate|Complex" in the triage comment
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner, repo, issue_number: issueNumber,
+            });
+
+            let complexity = 'moderate'; // default
+            for (const c of comments) {
+              const match = c.body.match(/\*\*Complexity estimate:\*\*\s*(Simple|Moderate|Complex)/i);
+              if (match) {
+                complexity = match[1].toLowerCase();
+                break;
+              }
+            }
+
+            // 3. Price table (midpoints of the documented ranges)
+            const PRICES = {
+              'tier:quick-fix': {
+                simple:   10,   // $10–$25 → use lower bound for quick fix simple
+                moderate: 25,
+                complex:  40,
+              },
+              'tier:complex-fix': {
+                simple:   75,   // $50–$150 → midpoint-ish
+                moderate: 200,
+                complex:  350,
+              },
+            };
+
+            const price = PRICES[tierLabel][complexity];
+            const tierName = tierLabel === 'tier:quick-fix' ? 'Quick Fix' : 'Complex Fix';
+
+            console.log(`Tier: ${tierLabel}, Complexity: ${complexity}, Price: $${price}`);
+
+            // 4. Mask the API key
+            const apiKey = process.env.NOWPAYMENTS_API_KEY;
+            core.setSecret(apiKey);
+
+            // 5. Call NOWPayments Invoice API
+            let invoiceUrl;
+            try {
+              const response = await fetch('https://api.nowpayments.io/v1/invoice', {
+                method: 'POST',
+                headers: {
+                  'x-api-key': apiKey,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  price_amount:      price,
+                  price_currency:    'usd',
+                  order_id:          `swarmfix-issue-${issueNumber}`,
+                  order_description: issueTitle,
+                  success_url:       issueUrl,
+                  cancel_url:        issueUrl,
+                }),
+              });
+
+              if (!response.ok) {
+                const errBody = await response.text();
+                throw new Error(`NOWPayments API error ${response.status}: ${errBody}`);
+              }
+
+              const data = await response.json();
+              invoiceUrl = data.invoice_url;
+              if (!invoiceUrl) {
+                throw new Error(`No invoice_url in response: ${JSON.stringify(data)}`);
+              }
+            } catch (err) {
+              // 5a. Post error comment and stop — don't remove status:accepted
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issueNumber,
+                body: [
+                  '⚠️ **Payment Invoice Error**',
+                  '',
+                  'An error occurred while creating your payment invoice. The team has been notified and will follow up shortly.',
+                  '',
+                  `_Details: ${err.message}_`,
+                ].join('\n'),
+              });
+              core.setFailed(`Invoice creation failed: ${err.message}`);
+              return;
+            }
+
+            // 6. Post payment comment
+            const comment = [
+              `💳 **Payment Required — ${tierName}**`,
+              '',
+              `Your issue has been accepted for a **${tierName}** fix at **$${price} USD**.`,
+              '',
+              '---',
+              '',
+              `**👉 [Pay Now — $${price} USD](${invoiceUrl})**`,
+              '',
+              '---',
+              '',
+              '**What this covers:**',
+              `- ${tierName} tier fix for: _${issueTitle}_`,
+              '- SwarmFix will begin work immediately after payment is confirmed.',
+              '',
+              '**Instructions:**',
+              '1. Click the payment link above.',
+              '2. Choose your preferred cryptocurrency and complete the payment.',
+              '3. Once payment is confirmed on-chain, work will begin automatically.',
+              '',
+              '_Payment links expire after 24 hours. If yours expires, please comment below and we will generate a new one._',
+              '',
+              '> 🔒 Payments are processed securely via NOWPayments.',
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: issueNumber,
+              body: comment,
+            });
+
+            console.log('Payment comment posted.');
+
+            // 7. Add status:payment-pending
+            await github.rest.issues.addLabels({
+              owner, repo, issue_number: issueNumber,
+              labels: ['status:payment-pending'],
+            });
+
+            console.log('Applied label: status:payment-pending');
+
+            // 8. Remove status:accepted
+            try {
+              await github.rest.issues.removeLabel({
+                owner, repo, issue_number: issueNumber,
+                name: 'status:accepted',
+              });
+              console.log('Removed label: status:accepted');
+            } catch (err) {
+              // Label may have already been removed; non-fatal
+              console.log(`Could not remove status:accepted: ${err.message}`);
+            }
